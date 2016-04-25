@@ -21,21 +21,99 @@ void Navigator::orient(float angle) {
   float error = angle - this->theta;
   if(is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) return;
   if(error > 0)  {
-    while(!is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) {
-      this->_drive_ptr->turnLeft(NAV_TURN_SPEED);
+    //while(!is_within(this->theta, angle, .2)) {
+    while(!is_within(this->theta, angle, .2)) {
+      if(is_within(this->theta, angle, .2 * 3)) {
+        this->_drive_ptr->turnLeft(NAV_SLOW_TURN_SPEED);
+      } else {
+        this->_drive_ptr->turnLeft(NAV_TURN_SPEED);
+      }
+      //delay(100);
+      //Serial.print("Should be turning left\th = ");
+      //Serial.print(this->theta);
+      //Serial.print(" Error = ");
+      //Serial.println(angle - theta);
+      //this->_drive_ptr->stop();
       this->update_marker();
-      //Serial.print("Heading: ");
-      //Serial.println(this->theta);
     }
   } else {
-    while(!is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) {
-      this->_drive_ptr->turnRight(NAV_TURN_SPEED);
+    while(!is_within(this->theta, angle, .2)) {
+      if(is_within(this->theta, angle, .2 * 3)) {
+        this->_drive_ptr->turnRight(NAV_SLOW_TURN_SPEED);
+      } else {
+        this->_drive_ptr->turnRight(NAV_TURN_SPEED);
+      }
+      //delay(100);
+      //Serial.println("Should be turning right");
+      //this->_drive_ptr->stop();
       this->update_marker();
     }
   }
+  Serial.println("Orient over");
 }
 
-float Navigator::get_angle(float x, float y, int flame_sight) {
+void Navigator::orientZero() { //this method will make sure that the world does not explode
+  this->update_marker();
+  while(!is_within(this->theta, 0, .2) && !is_within(this->theta, 2*PI, .2)) {
+    if(is_within(this->theta, 0, .2 * 4) || is_within(this->theta, 2*PI, .2 * 4)) {
+        this->_drive_ptr->turnRight(NAV_SLOW_TURN_SPEED - .05);
+    } else {
+      this->_drive_ptr->turnRight(NAV_TURN_SPEED);
+    }
+    this->update_marker(); 
+  }
+}
+
+void Navigator::translate_x(float dest) { //this method will make sure that the previous method will not explode
+  this->update_marker();
+  while(!this->is_within(this->x, dest, NAV_COORDINATE_TOLERANCE)) {
+  //while(th
+      this->_drive_ptr->drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      this->_rf_ptr->sendMessage(dest- this->x);
+      this->_rf_ptr->sendMessage("\n");
+      this->update_marker();
+  }
+}
+
+void Navigator::translate_y(float dest) { //this method will make sure you dont divide by zero
+  this->update_marker();
+  while(!this->is_within(this->y, dest, NAV_COORDINATE_TOLERANCE)) {
+      this->_drive_ptr->drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      this->update_marker();
+  }
+}
+
+void Navigator::translate_x_angle(float dest, float angle) { //this method will make sure that the previous method will not explode
+  this->update_marker();
+  while(!this->is_within(this->x, dest, NAV_COORDINATE_TOLERANCE)) {
+      this->drive_angle(NAV_TRANSLATE_SPEED, angle, this->theta);
+      this->update_marker();
+  }
+}
+
+void Navigator::translate_y_angle(float dest, float angle) { //this method will make sure you dont divide by zero
+  this->update_marker();
+  while(!this->is_within(this->y, dest, NAV_COORDINATE_TOLERANCE)) {
+      this->drive_angle(NAV_TRANSLATE_SPEED, angle, this->theta);
+      this->update_marker();
+  }
+}
+
+void Navigator::drive_angle(float speed, float setpoint, float heading) {
+  float error = setpoint - heading;
+  float kp = speed/(PI/2);
+  if (setpoint == 0) {
+    float error2 = (2*PI) - heading;
+    if(abs_val(error) > abs_val(error2)) {
+      error = error2;
+    }
+  }
+  float correction = kp * error;
+  correction = constrain(correction, -speed, speed);
+  this->_drive_ptr->drive(speed - correction, speed + correction);
+}
+
+float Navigator::get_angle(float x, float y, int flame_sight) { //this method will divide by zero
   // Probably need to add 2 PI since tanf returns negative angle.
   float angle = 0.0;
   
@@ -48,7 +126,7 @@ float Navigator::get_angle(float x, float y, int flame_sight) {
   return angle;
 }
 
-void Navigator::turn_amount(float angle) {
+void Navigator::turn_amount(float angle) { //this method makes sure to not start a fire
   this->update_marker();
   float target_angle = this->theta + angle;
   while(this->theta < target_angle) {

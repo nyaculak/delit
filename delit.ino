@@ -10,7 +10,6 @@
 
 #include "OSV_Drive.h"
 #include "FlameSensor.h"
-#include "IRSensor.h"
 #include "Ultrasonic.h"
 #include "Navigator.h"
 
@@ -29,7 +28,7 @@
 #define RIGHT_ULTRASONIC_DC_PIN   5
 #define FAN_PIN 2
 
-#define RF_ID 104
+#define RF_ID 112
 
 SoftwareSerial sSerial(SSERIAL_TX, SSERIAL_RX);
 enes100::RfClient<SoftwareSerial> rf(&sSerial);
@@ -38,8 +37,6 @@ enes100::Marker marker;
 OSV_Drive drive;
 Servo flameSensorServo;
 FlameSensor flameSensor(FLAME_SENSOR_PIN, &flameSensorServo);
-IRSensor leftIR(LEFT_IR_SENSOR_PIN);
-IRSensor rightIR(RIGHT_IR_SENSOR_PIN);
 Ultrasonic leftUltrasonic(LEFT_ULTRASONIC_TRIG_PIN, LEFT_ULTRASONIC_ECHO_PIN, LEFT_ULTRASONIC_DC_PIN);
 Ultrasonic rightUltrasonic(RIGHT_ULTRASONIC_TRIG_PIN, RIGHT_ULTRASONIC_ECHO_PIN, RIGHT_ULTRASONIC_DC_PIN);
 Navigator nav(&marker, &rf, &drive, RF_ID);
@@ -63,9 +60,17 @@ void loop() {
   
   //turn_test();
   //nav_test();
-  
+  //drive_to_center();
+  random_nav();
+  //print_pos();
+  /*
+  if(flag) {
+    nav.translate_x(NAV_FLAME1_X);
+    flag = false;
+  }
+  */
   //print_dist();
-  test_fan();
+  //test_fan();
   
   //print_pos();
   // flame_test();
@@ -73,9 +78,10 @@ void loop() {
 }
 
 void test_fan() {
-  if(flameSensor.detectFlame()) {
+  if(flameSensor.sweepForFlame()) {
     digitalWrite(FAN_PIN, HIGH); 
     delay(300);
+    digitalWrite(FAN_PIN, LOW);
   } else {
     digitalWrite(FAN_PIN, LOW);
   }
@@ -109,7 +115,7 @@ void flame_test() {
 }
 
 void turn_test() {
-  static flag;
+  //static flag;
   delay(100);
   if(flag) {
     //Serial.println("Begin Turn Test");
@@ -118,17 +124,17 @@ void turn_test() {
     float start_angle = nav.theta;
     //Serial.println("Turning to PI/2");
     rf.sendMessage("Turning to PI/2");
-    nav.orient(start_angle + PI/2+ .2);
+    nav.orient(start_angle + PI/2);
     drive.stop();
     delay(500);
     //Serial.println("Turning to PI");
     rf.sendMessage("Turning to PI");
-    nav.orient(start_angle + PI + .2);
+    nav.orient(start_angle + PI);
     drive.stop();
     delay(500);
     //Serial.println("Turning to 3PI/2");
     rf.sendMessage("Turning to 3PI/2");
-    nav.orient(start_angle + 3*PI/2 + .2);
+    nav.orient(start_angle + 3*PI/2);
     drive.stop();
     flag = false;
     //Serial.println("Turning Done");
@@ -141,11 +147,12 @@ void nav_test() {
     nav.update_marker();
     while(nav.x < NAV_FLAME1_X) {
       drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      //nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav);
       nav.update_marker();
     }
     drive.stop();
     float start_angle = nav.theta;
-    nav.orient(start_angle + PI/2 + .62);
+    nav.orient(PI/2);
     while(nav.y < NAV_FLAME1_Y) {
       drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
       nav.update_marker();
@@ -158,21 +165,70 @@ void nav_test() {
 void random_nav() {
   if(flag) {
     drive_to_center();
-    // need to add in initial obstacle avoidance
+    //avoid_obstacle();
     nav_test();
+    flag = false;
   } 
 }
 
 void drive_to_center() {
   nav.update_marker();
   if(nav.y > 1000) {
-    nav.orient(3*PI/2); 
+    nav.orient(3*PI/2);
+    //while(!nav.is_within(nav.y, 1050, NAV_COORDINATE_TOLERANCE)) {
+    while(nav.y > 1050) {
+      drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      nav.update_marker();
+    }
   } else {
     nav.orient(PI/2);
+    //while(!nav.is_within(nav.y, 900, NAV_COORDINATE_TOLERANCE)) {
+    while(nav.y < 900) {
+      drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      nav.update_marker();
+    }
   }
-  while(!nav.is_within(nav.y, 1000, NAV_COORDINATE_TOLERANCE)) {
-    drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
-    nav.update_marker();
+  nav.orientZero();
+}
+
+void avoid_obstacle() {
+  float leftDist, rightDist;
+  nav.translate_x(NAV_OBSTACLE_X - 100);
+  drive.stop();
+  leftDist = leftUltrasonic.getDistance();
+  rightDist = rightUltrasonic.getDistance();
+  // obstacle on left side
+  if(leftDist < NAV_OBSTACLE_THRESHOLD) {
+    // turn left
+    nav.orient(PI/2);
+    // drive up
+    nav.translate_y(1500);
+    // turn right
+    nav.orientZero();
+    // drive forward
+    nav.translate_x(NAV_OBSTACLE_X + 500);
+    // turn "right"
+    nav.orient(3*PI/2);
+    // drive back to center
+    nav.translate_y(1000);
+    // turn back
+    nav.orientZero();
+  } else if (rightDist < NAV_OBSTACLE_THRESHOLD) {
+    // turn "right"
+    nav.orient(3*PI/2);
+    // drive down
+    nav.translate_y(500);
+    // turn back
+    nav.orientZero();
+    // drive infront of obstacle
+    nav.translate_x(NAV_OBSTACLE_X + 500);
+    // turn left
+    nav.orient(PI/2);
+    // drive back to center
+    nav.translate_y(1000);
+    // turn back
+    nav.orientZero();
+  } else {
+    // do nothing
   }
-  nav.orient(0);
 }
