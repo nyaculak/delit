@@ -21,19 +21,12 @@ void Navigator::orient(float angle) {
   float error = angle - this->theta;
   if(is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) return;
   if(error > 0)  {
-    //while(!is_within(this->theta, angle, .2)) {
     while(!is_within(this->theta, angle, .2)) {
       if(is_within(this->theta, angle, .2 * 3)) {
         this->_drive_ptr->turnLeft(NAV_SLOW_TURN_SPEED);
       } else {
         this->_drive_ptr->turnLeft(NAV_TURN_SPEED);
       }
-      //delay(100);
-      //Serial.print("Should be turning left\th = ");
-      //Serial.print(this->theta);
-      //Serial.print(" Error = ");
-      //Serial.println(angle - theta);
-      //this->_drive_ptr->stop();
       this->update_marker();
     }
   } else {
@@ -43,13 +36,9 @@ void Navigator::orient(float angle) {
       } else {
         this->_drive_ptr->turnRight(NAV_TURN_SPEED);
       }
-      //delay(100);
-      //Serial.println("Should be turning right");
-      //this->_drive_ptr->stop();
       this->update_marker();
     }
   }
-  Serial.println("Orient over");
 }
 
 void Navigator::orientZero() { //this method will make sure that the world does not explode
@@ -101,7 +90,7 @@ void Navigator::translate_y_angle(float dest, float angle) { //this method will 
 
 void Navigator::drive_angle(float speed, float setpoint, float heading) {
   float error = setpoint - heading;
-  float kp = speed/(PI/2);
+  float kp = (2)*speed/(PI/2);
   if (setpoint == 0) {
     float error2 = (2*PI) - heading;
     if(abs_val(error) > abs_val(error2)) {

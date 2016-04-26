@@ -4,6 +4,8 @@
 #ifndef FlameSensor_h
 #define FlameSensor_h
 
+#define FLAME_SENSOR_MAX_ANGLE 110
+
 class FlameSensor {
   public:
     FlameSensor(int, Servo*);

@@ -28,7 +28,7 @@
 #define RIGHT_ULTRASONIC_DC_PIN   5
 #define FAN_PIN 2
 
-#define RF_ID 112
+#define RF_ID 115
 
 SoftwareSerial sSerial(SSERIAL_TX, SSERIAL_RX);
 enes100::RfClient<SoftwareSerial> rf(&sSerial);
@@ -73,7 +73,8 @@ void loop() {
   //test_fan();
   
   //print_pos();
-  // flame_test();
+  //test_fan();
+  //twist_for_flame1();
   // delay(100);
 }
 
@@ -114,6 +115,24 @@ void flame_test() {
   }
 }
 
+void twist_for_flame1() {
+  for(int pos = 60; pos < FLAME_SENSOR_MAX_ANGLE; pos += 5) {
+    flameSensor.setServo(pos);
+    nav.orient(PI/2 + PI/4);
+    while(nav.theta > (PI/2 - PI/4)) {
+      drive.turnRight(NAV_TURN_SPEED);
+      if(flameSensor.detectFlame()) {
+        drive.stop();
+        digitalWrite(FAN_PIN, HIGH);
+        delay(1000);
+        digitalWrite(FAN_PIN, LOW);
+      }
+      nav.update_marker();
+    }
+  }
+}
+    
+
 void turn_test() {
   //static flag;
   delay(100);
@@ -147,6 +166,7 @@ void nav_test() {
     nav.update_marker();
     while(nav.x < NAV_FLAME1_X) {
       drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav.theta);
       //nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav);
       nav.update_marker();
     }
@@ -155,6 +175,7 @@ void nav_test() {
     nav.orient(PI/2);
     while(nav.y < NAV_FLAME1_Y) {
       drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      nav.drive_angle(NAV_TRANSLATE_SPEED, PI/2, nav.theta);
       nav.update_marker();
     }
     drive.stop();
@@ -167,6 +188,7 @@ void random_nav() {
     drive_to_center();
     //avoid_obstacle();
     nav_test();
+    twist_for_flame1();
     flag = false;
   } 
 }
@@ -176,15 +198,17 @@ void drive_to_center() {
   if(nav.y > 1000) {
     nav.orient(3*PI/2);
     //while(!nav.is_within(nav.y, 1050, NAV_COORDINATE_TOLERANCE)) {
-    while(nav.y > 1050) {
-      drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+    while(nav.y > 1000) {
+      //drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      nav.drive_angle(NAV_TRANSLATE_SPEED, 3*PI/2, nav.theta);
       nav.update_marker();
     }
   } else {
     nav.orient(PI/2);
     //while(!nav.is_within(nav.y, 900, NAV_COORDINATE_TOLERANCE)) {
-    while(nav.y < 900) {
-      drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+    while(nav.y < 800) {
+      //drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
+      nav.drive_angle(NAV_TRANSLATE_SPEED, PI/2, nav.theta);
       nav.update_marker();
     }
   }

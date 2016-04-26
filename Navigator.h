@@ -8,11 +8,11 @@
 #ifndef Navigator_h
 #define Navigator_h
 
-#define NAV_RF_DELAY_TIME 50 // ms
+#define NAV_RF_DELAY_TIME 10 // ms
 
 #define NAV_TRANSLATE_SPEED .4
-#define NAV_TURN_SPEED .45
-#define NAV_SLOW_TURN_SPEED .35
+#define NAV_TURN_SPEED .4
+#define NAV_SLOW_TURN_SPEED (NAV_TURN_SPEED - .05)
 
 #define NAV_OBSTACLE_THRESHOLD 50
 #define NAV_HEADING_TOLERANCE .2
@@ -21,7 +21,7 @@
 #define NAV_OBSTACLE_X 1000.00
 #define NAV_OBSTACLE_Y 100.00
 #define NAV_FLAME1_X 2800.00 //2900
-#define NAV_FLAME1_Y 1250.00 //1800
+#define NAV_FLAME1_Y 1225.00 //1800
 #define NAV_FLAME2_X 3700.00
 #define NAV_FLAME2_Y 0900.00
 
