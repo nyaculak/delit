@@ -11,7 +11,6 @@ class FlameSensor {
     FlameSensor(int, Servo*);
     boolean detectFlame();
     void setServo(int);
-    boolean sweepForFlame();
   private:
     int _pin;
     Servo* _servo;

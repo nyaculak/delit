@@ -13,6 +13,8 @@ void Navigator::update_marker() {
     this->x = this->_marker_ptr->x * 1000;
     this->y = this->_marker_ptr->y * 1000;
     this->theta = (this->_marker_ptr->theta > 0) ? this->_marker_ptr->theta : this->_marker_ptr->theta + 2 * PI;
+  } else {
+    this->_drive_ptr->stop(); 
   }
 }
 
@@ -21,8 +23,8 @@ void Navigator::orient(float angle) {
   float error = angle - this->theta;
   if(is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) return;
   if(error > 0)  {
-    while(!is_within(this->theta, angle, .2)) {
-      if(is_within(this->theta, angle, .2 * 3)) {
+    while(!is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) {
+      if(is_within(this->theta, angle, NAV_HEADING_TOLERANCE * 3)) {
         this->_drive_ptr->turnLeft(NAV_SLOW_TURN_SPEED);
       } else {
         this->_drive_ptr->turnLeft(NAV_TURN_SPEED);
@@ -30,8 +32,8 @@ void Navigator::orient(float angle) {
       this->update_marker();
     }
   } else {
-    while(!is_within(this->theta, angle, .2)) {
-      if(is_within(this->theta, angle, .2 * 3)) {
+    while(!is_within(this->theta, angle, NAV_HEADING_TOLERANCE)) {
+      if(is_within(this->theta, angle, NAV_HEADING_TOLERANCE * 3)) {
         this->_drive_ptr->turnRight(NAV_SLOW_TURN_SPEED);
       } else {
         this->_drive_ptr->turnRight(NAV_TURN_SPEED);
@@ -41,11 +43,15 @@ void Navigator::orient(float angle) {
   }
 }
 
-void Navigator::orientZero() { //this method will make sure that the world does not explode
+void Navigator::orientZero() {
   this->update_marker();
-  while(!is_within(this->theta, 0, .2) && !is_within(this->theta, 2*PI, .2)) {
-    if(is_within(this->theta, 0, .2 * 4) || is_within(this->theta, 2*PI, .2 * 4)) {
+  while(!is_within(this->theta, 0, NAV_HEADING_TOLERANCE) && !is_within(this->theta, 2*PI, NAV_HEADING_TOLERANCE)) {
+    if(is_within(this->theta, 0, NAV_HEADING_TOLERANCE * 4) || is_within(this->theta, 2*PI, NAV_HEADING_TOLERANCE * 4)) {
         this->_drive_ptr->turnRight(NAV_SLOW_TURN_SPEED - .05);
+        //this->_drive_ptr->turnRight(NAV_TURN_SPEED * 1.5);
+        //delay(100);
+        //this->_drive_ptr->stop();
+        //delay(100);
     } else {
       this->_drive_ptr->turnRight(NAV_TURN_SPEED);
     }
@@ -53,7 +59,7 @@ void Navigator::orientZero() { //this method will make sure that the world does 
   }
 }
 
-void Navigator::translate_x(float dest) { //this method will make sure that the previous method will not explode
+void Navigator::translate_x(float dest) {
   this->update_marker();
   while(!this->is_within(this->x, dest, NAV_COORDINATE_TOLERANCE)) {
   //while(th
@@ -64,7 +70,7 @@ void Navigator::translate_x(float dest) { //this method will make sure that the 
   }
 }
 
-void Navigator::translate_y(float dest) { //this method will make sure you dont divide by zero
+void Navigator::translate_y(float dest) {
   this->update_marker();
   while(!this->is_within(this->y, dest, NAV_COORDINATE_TOLERANCE)) {
       this->_drive_ptr->drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);

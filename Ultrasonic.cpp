@@ -29,12 +29,12 @@ int Ultrasonic::getDistance() {
     digitalWrite(this->_dcPin, HIGH); 
   }
   
-  return this->microsecondsToMillimeters(duration);
+  return this->microsecondsToCentimeters(duration);
 }
 
 /*******************
  * Private methods
  ******************/
-long Ultrasonic::microsecondsToMillimeters(long microseconds) {
+long Ultrasonic::microsecondsToCentimeters(long microseconds) {
   return microseconds / 29 / 2;
 }
