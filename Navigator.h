@@ -21,9 +21,9 @@
 #define NAV_OBSTACLE_X 1000.00
 #define NAV_OBSTACLE_Y 100.00
 #define NAV_FLAME1_X 2800.00 //2900
-#define NAV_FLAME1_Y 1240.00 //1800
-#define NAV_FLAME2_X 3700.00
-#define NAV_FLAME2_Y 0900.00
+#define NAV_FLAME1_Y 1200.00 //1800
+#define NAV_FLAME2_X 3300.00
+#define NAV_FLAME2_Y 1050.00
 
 class Navigator {
   public:
@@ -31,13 +31,7 @@ class Navigator {
     void update_marker();
     void orient(float angle);
     void orientZero();
-    void translate_x(float dest);
-    void translate_y(float dest);
-    void translate_x_angle(float, float);
-    void translate_y_angle(float, float);
     void drive_angle(float, float, float);
-    float get_angle(float x, float y, int flame_sight);
-    void turn_amount(float angle);
     float x;
     float y;
     float theta;

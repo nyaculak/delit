@@ -4,7 +4,7 @@
 #ifndef FlameSensor_h
 #define FlameSensor_h
 
-#define FLAME_SENSOR_MAX_ANGLE 110
+#define FLAME_SENSOR_MAX_ANGLE 75
 
 class FlameSensor {
   public:
