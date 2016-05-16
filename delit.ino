@@ -25,7 +25,10 @@
 #define RIGHT_ULTRASONIC_DC_PIN   5
 #define FAN_PIN                   2
 
-#define RF_ID 113
+#define RF_ID 104
+
+#define DRIVE_DELAY 40
+#define STOP_DELAY  125
 
 SoftwareSerial sSerial(SSERIAL_TX, SSERIAL_RX);
 enes100::RfClient<SoftwareSerial> rf(&sSerial);
@@ -53,6 +56,7 @@ void setup() {
 
 boolean flag = true;
 void loop() {
+  
   if(flag) {
     drive_to_center();
     avoid_obstacle();
@@ -62,6 +66,8 @@ void loop() {
     twist_for_flame2();
     flag = false;
   }
+  
+  print_dist();
 }
 
 void test_fan() {
@@ -92,10 +98,22 @@ void twist_for_flame1() {
     flameSensor.setServo(pos);
     nav.orient(PI/2 + PI/8);
     while(nav.theta > (PI/2 - PI/8)) {
-      drive.turnRight(NAV_TURN_SPEED * 1.5);
-      delay(100);
+      for(int i = 0; i < DRIVE_DELAY; i++) {
+        if(flameSensor.detectFlame()) {
+          drive.stop();
+          rf.sendMessage("Detected flame at site 1");
+          digitalWrite(FAN_PIN, HIGH);
+          delay(1000);
+          digitalWrite(FAN_PIN, LOW);
+          rf.sendMessage("Extinguished flame at site 1");
+          return;
+        }
+        drive.turnRight(NAV_TURN_SPEED * 1.5);
+        delay(1);
+      }
+      //delay(DRIVE_DELAY);
       drive.stop();
-      delay(100);
+      delay(STOP_DELAY);
       if(flameSensor.detectFlame()) {
         drive.stop();
         rf.sendMessage("Detected flame at site 1");
@@ -121,19 +139,33 @@ int getLowestDist() {
 }
 
 void twist_for_flame2() {
+  nav.orient(PI/8);
   for(int pos = 60; pos < FLAME_SENSOR_MAX_ANGLE; pos += 5) {
     flameSensor.setServo(pos);
     nav.update_marker();
     while(!nav.is_within(nav.theta, PI/8, NAV_HEADING_TOLERANCE * 2)) {
-      drive.turnLeft(NAV_TURN_SPEED * 1.5);
+      drive.turnLeft(NAV_TURN_SPEED);
       nav.update_marker();
     }
     //nav.orient(PI/4);
     while(nav.theta > (3*PI/2 + PI/4 + PI/8) || nav.theta < (PI/2)) {
-      drive.turnRight(NAV_TURN_SPEED * 1.5);
-      delay(100);
+      //drive.turnRight(NAV_TURN_SPEED * 1.5);
+      //delay(DRIVE_DELAY);
+      for(int i = 0; i < DRIVE_DELAY; i++) {
+        if(flameSensor.detectFlame()) {
+          drive.stop();
+          rf.sendMessage("Detected flame at site 1");
+          digitalWrite(FAN_PIN, HIGH);
+          delay(1000);
+          digitalWrite(FAN_PIN, LOW);
+          rf.sendMessage("Extinguished flame at site 1");
+          return;
+        }
+        drive.turnRight(NAV_TURN_SPEED * 1.5);
+        delay(1);
+      }
       drive.stop();
-      delay(100);
+      delay(STOP_DELAY);
       if(flameSensor.detectFlame()) {
         drive.stop();
         rf.sendMessage("Detected flame at site 2");
@@ -147,19 +179,20 @@ void twist_for_flame2() {
     }
   }
   rf.sendMessage("No flame at site 2");
+  rf.sendMessage("All flames extinguished");
 }
 
 void drive_to_center() {
   nav.update_marker();
   if(nav.y > 1000) {
     nav.orient(3*PI/2);
-    while(nav.y > 950) {
+    while(nav.y > 1110) {
       nav.drive_angle(NAV_TRANSLATE_SPEED, 3*PI/2, nav.theta);
       nav.update_marker();
     }
   } else {
     nav.orient(PI/2);
-    while(nav.y < 800) {
+    while(nav.y < 900) {
       nav.drive_angle(NAV_TRANSLATE_SPEED, PI/2, nav.theta);
       nav.update_marker();
     }
@@ -169,7 +202,7 @@ void drive_to_center() {
 
 void avoid_obstacle() {
   float leftDist, rightDist;
-  while(nav.x < NAV_OBSTACLE_X - 100) {
+  while(nav.x < NAV_OBSTACLE_X - 150) {
     nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav.theta);
     nav.update_marker();
   }
@@ -178,6 +211,9 @@ void avoid_obstacle() {
   rightDist = rightUltrasonic.getDistance();
   // obstacle on left side
   if(leftDist < NAV_OBSTACLE_THRESHOLD && leftDist != 0) {
+    drive.drive(-NAV_TRANSLATE_SPEED, -NAV_TRANSLATE_SPEED);
+    delay(100);
+    drive.stop();
     // turn left
     nav.orient(PI/2);
     // drive up
@@ -202,6 +238,9 @@ void avoid_obstacle() {
     // turn back
     nav.orientZero();
   } else if (rightDist < NAV_OBSTACLE_THRESHOLD && rightDist != 0) {
+    drive.drive(-NAV_TRANSLATE_SPEED, -NAV_TRANSLATE_SPEED);
+    delay(100);
+    drive.stop();
     // turn "right"
     nav.orient(3*PI/2);
     // drive down
@@ -233,11 +272,18 @@ void avoid_obstacle() {
 
 void nav_flame1() {
   nav.update_marker();
-  while(nav.x < NAV_FLAME1_X) {
+  while(nav.x < NAV_FLAME1_X - 200) {
     nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav.theta);
     nav.update_marker();
   }
   drive.stop();
+  while(nav.x < NAV_FLAME1_X) {
+    nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav.theta);
+    delay(100);
+    drive.stop();
+    delay(100);
+    nav.update_marker();
+  }
   nav.orient(PI/2);
   while(nav.y < NAV_FLAME1_Y) {
     //drive.drive(NAV_TRANSLATE_SPEED, NAV_TRANSLATE_SPEED);
@@ -245,7 +291,7 @@ void nav_flame1() {
     nav.update_marker();
   }
   drive.stop();
-  while(nav.y < NAV_FLAME1_Y + 250) {
+  while(nav.y < NAV_FLAME1_Y + 150) {
     nav.drive_angle(NAV_TRANSLATE_SPEED, PI/2, nav.theta);
     delay(100);
     drive.stop();
@@ -264,8 +310,17 @@ void nav_flame2() {
   }
   drive.stop();
   nav.orientZero();
+  /*
   while(nav.x < NAV_FLAME2_X) {
     nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav.theta);
+    nav.update_marker();
+  }
+  */
+  while(nav.x < NAV_FLAME2_X) {
+    nav.drive_angle(NAV_TRANSLATE_SPEED, 0, nav.theta);
+    delay(100);
+    drive.stop();
+    delay(100);
     nav.update_marker();
   }
   drive.stop();
